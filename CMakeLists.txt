@@ -29,7 +29,7 @@ add_compile_options(-march=native -Ofast -ggdb -Wall -Wpedantic)
 add_executable(halfloop-attack halfloop-attack.c halfloop-bitslice.c halfloop-common.c)
 add_executable(halfloop-boomerang halfloop-boomerang.c halfloop-common.c)
 add_executable(halfloop-generate-data halfloop-generate-data.c halfloop-common.c)
-add_executable(halfloop-seed halfloop-seed.c halfloop-common.c)
+add_executable(halfloop-tweak halfloop-tweak.c halfloop-common.c)
 add_executable(halfloop-test halfloop-test.c halfloop-bitslice.c halfloop-common.c)
 
 target_link_libraries(halfloop-attack PRIVATE Threads::Threads)

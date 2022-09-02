@@ -106,7 +106,7 @@ typedef enum {
 } color_t;
 
 /**
- * @brief Structure representing the contents of a HALFLOOP seed.
+ * @brief Structure representing the contents of a HALFLOOP tweak.
  */
 typedef struct {
   int month;
@@ -116,7 +116,7 @@ typedef struct {
   int word;
   int zero;
   int frequency;
-} seed_t;
+} tweak_t;
 
 /**
  * @brief Absolute value.
@@ -255,31 +255,31 @@ u32 key_schedule_g(u32 key_word, u32 rc);
  *
  * @param rk   the round the output vector. Must be a pointer to an array of length 11.
  * @param key  the 128-bit key.
- * @param seed the 64-bit seed.
+ * @param tweak the 64-bit tweak.
  */
-halfloop_result_t key_schedule(u32 *rk, u128 key, u64 seed);
+halfloop_result_t key_schedule(u32 *rk, u128 key, u64 tweak);
 
 /**
  * @brief Encrypts a HALFLOOP-24 plaintext.
  *
  * @param pt   the 24-bit plaintext to encrypt. The most significant eight bits must be zero.
  * @param key  the 128-bit key to use for the encryption.
- * @param seed the 64-bit seed to use for the encryption.
+ * @param tweak the 64-bit tweak to use for the encryption.
  * @param ct   the encrypted 24-bit ciphertext.
  * @return HALFLOOP_SUCCESS on success.
  */
-halfloop_result_t halfloop_encrypt(u32 pt, u128 key, u64 seed, u32 *ct);
+halfloop_result_t halfloop_encrypt(u32 pt, u128 key, u64 tweak, u32 *ct);
 
 /**
  * @brief Decrypts a HALFLOOP-24 ciphertext.
  *
  * @param ct   the 24-bit ciphertext to decrypt. The most significant eight bits must be zero.
  * @param key  the 128-bit key to use for the decryption.
- * @param seed the 64-bit seed to use for the decryption.
+ * @param tweak the 64-bit tweak to use for the decryption.
  * @param pt   the decrypted 24-bit plaintext.
  * @return HALFLOOP_SUCCESS on success.
  */
-halfloop_result_t halfloop_decrypt(u32 ct, u128 key, u64 seed, u32 *pt);
+halfloop_result_t halfloop_decrypt(u32 ct, u128 key, u64 tweak, u32 *pt);
 
 /**
  * @brief Initializes various data structures that are used by the functions that implement
@@ -309,22 +309,22 @@ halfloop_result_t test_halfloop();
 halfloop_result_t print_message(const char *format, color_t color, ...);
 
 /**
- * @brief Parses a HALFLOOP seed.
+ * @brief Parses a HALFLOOP tweak.
  *
- * @param seed a 64-bit seed.
+ * @param tweak a 64-bit tweak.
  * @param parsed pointer to a struct that will hold the parsed values on successful return.
  * @return halfloop_result_t HALFLOOP_SUCCESS on success.
  */
-halfloop_result_t parse_seed(u64 seed, seed_t *parsed);
+halfloop_result_t parse_tweak(u64 tweak, tweak_t *parsed);
 
 /**
- * @brief Generates a 64-bit seed value.
+ * @brief Generates a 64-bit tweak value.
  *
- * @param values the intended values of the various seed fields.
- * @param seed output pointer for the generated seed.
+ * @param values the intended values of the various tweak fields.
+ * @param tweak output pointer for the generated tweak.
  * @return halfloop_result_t HALFLOOP_SUCCESS on success.
  */
-halfloop_result_t create_seed(seed_t values, u64 *seed);
+halfloop_result_t create_tweak(tweak_t values, u64 *tweak);
 
 /**
  * @brief Writes random bytes to an address.

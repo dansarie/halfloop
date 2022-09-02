@@ -24,14 +24,14 @@
 int main(int argc, char *argv[]) {
   halfloop_result_t err = HALFLOOP_SUCCESS;
   u128 key = ((u128)0x2b7e151628aed2a6 << 64) | 0xabf7158809cf4f3c;
-  u64 seed = 0x543bd88000017550;
+  u64 tweak = 0x543bd88000017550;
   u32 pt = 0x010203;
   u32 ct;
   print_message("Testing standard implementation.", WHITE);
   RETURN_ON_ERROR(init_halfloop());
-  RETURN_ON_ERROR(halfloop_encrypt(pt, key, seed, &ct));
+  RETURN_ON_ERROR(halfloop_encrypt(pt, key, tweak, &ct));
   RETURN_IF(ct != 0xf28c1e, HALFLOOP_INTERNAL_ERROR);
-  RETURN_ON_ERROR(halfloop_decrypt(ct, key, seed, &pt));
+  RETURN_ON_ERROR(halfloop_decrypt(ct, key, tweak, &pt));
   RETURN_IF(pt != 0x010203, HALFLOOP_INTERNAL_ERROR);
   print_message("Standard implementation ok.", WHITE);
   RETURN_ON_ERROR(test_halfloop_bitslice());

@@ -27,9 +27,9 @@ int main(int argc, char *argv[]) {
   int queries = 0;
   u32 pt0 = 0;
   u32 ct[256] = {0};
-  u64 seed0 = 0;
+  u64 tweak0 = 0;
   u128 key = 0;
-  seed_t seed = {0};
+  tweak_t tweak = {0};
   struct timespec timer;
   halfloop_result_t err = HALFLOOP_SUCCESS;
 
@@ -48,16 +48,16 @@ int main(int argc, char *argv[]) {
   RETURN_ON_ERROR(test_halfloop());
 
   RETURN_ON_ERROR(random_bytes(&key, sizeof(u128)));
-  RETURN_ON_ERROR(random_bytes(&seed, sizeof(seed)));
-  seed.month = (ABS(seed.month) % 12) + 1;
+  RETURN_ON_ERROR(random_bytes(&tweak, sizeof(tweak)));
+  tweak.month = (ABS(tweak.month) % 12) + 1;
   int days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-  seed.day = (ABS(seed.day) % days[seed.month - 1]) + 1;
-  seed.coarse_time = ABS(seed.coarse_time) % 1440;
-  seed.fine_time = ABS(seed.fine_time) % 60;
-  seed.word = ABS(seed.word) % 256;
-  seed.zero = 0;
-  seed.frequency = (ABS(seed.frequency) % 270000) * 100 + 3000000;
-  RETURN_ON_ERROR(create_seed(seed, &seed0));
+  tweak.day = (ABS(tweak.day) % days[tweak.month - 1]) + 1;
+  tweak.coarse_time = ABS(tweak.coarse_time) % 1440;
+  tweak.fine_time = ABS(tweak.fine_time) % 60;
+  tweak.word = ABS(tweak.word) % 256;
+  tweak.zero = 0;
+  tweak.frequency = (ABS(tweak.frequency) % 270000) * 100 + 3000000;
+  RETURN_ON_ERROR(create_tweak(tweak, &tweak0));
 
   fprintf(stderr, "Key: %016" PRIx64 "%016" PRIx64 "\n", (u64)(key >> 64), (u64)key);
 
@@ -66,16 +66,16 @@ int main(int argc, char *argv[]) {
     RETURN_ON_ERROR(random_bytes(&pt0, sizeof(u32)));
     pt0 &= 0xffffff;
     for (int delta = 0; delta < 0x100; delta++) {
-      u64 seed = seed0 ^ ((u64)delta << 40);
-      RETURN_ON_ERROR(halfloop_encrypt(pt0 ^ delta, key, seed, ct + delta));
+      u64 tweak = tweak0 ^ ((u64)delta << 40);
+      RETURN_ON_ERROR(halfloop_encrypt(pt0 ^ delta, key, tweak, ct + delta));
     }
     queries += 256;
     for (int i = 0; i < 0x100 && found < num_pairs; i++) {
       for (int j = i + 1; j < 0x100 && found < num_pairs; j++) {
         u32 out_diff = (i ^ j) << 16;
         if ((ct[i] ^ ct[j]) == out_diff) {
-          printf("%06x %06x %06" PRIx64 "\n", pt0 ^ i, ct[i], seed0 ^ ((u64)i << 40));
-          printf("%06x %06x %06" PRIx64 "\n", pt0 ^ j, ct[j], seed0 ^ ((u64)j << 40));
+          printf("%06x %06x %06" PRIx64 "\n", pt0 ^ i, ct[i], tweak0 ^ ((u64)i << 40));
+          printf("%06x %06x %06" PRIx64 "\n", pt0 ^ j, ct[j], tweak0 ^ ((u64)j << 40));
           found += 1;
         }
       }

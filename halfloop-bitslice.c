@@ -740,7 +740,7 @@ error:
 
 halfloop_result_t test_halfloop_bitslice() {
   u32 pt = 0;
-  u64 seed = 0;
+  u64 tweak = 0;
   u128 key = 0;
   u32 rk[11];
   u32 *found = NULL;
@@ -748,7 +748,7 @@ halfloop_result_t test_halfloop_bitslice() {
   halfloop_result_t err = HALFLOOP_SUCCESS;
 
   RETURN_ON_ERROR(random_bytes(&pt, sizeof(u32)));
-  RETURN_ON_ERROR(random_bytes(&seed, sizeof(u64)));
+  RETURN_ON_ERROR(random_bytes(&tweak, sizeof(u64)));
   RETURN_ON_ERROR(random_bytes(&key, sizeof(u128)));
   pt &= 0xffffff;
 
@@ -756,7 +756,7 @@ halfloop_result_t test_halfloop_bitslice() {
   RETURN_ON_ERROR(test_bitslice_sbox());
   RETURN_ON_ERROR(test_bitslice_rotate_rows());
   RETURN_ON_ERROR(test_bitslice_mix_columns());
-  RETURN_ON_ERROR(key_schedule(rk, key, seed));
+  RETURN_ON_ERROR(key_schedule(rk, key, tweak));
 
   u32 state = pt;
   for (int i = 0; i < 8; i++) {
@@ -791,8 +791,8 @@ halfloop_result_t test_halfloop_bitslice() {
 
 error:
   if (err != HALFLOOP_SUCCESS) {
-    print_message("Bitslice test failed. PT=%06x Seed=%016" PRIx64 " Key=%016" PRIx64 "%016" PRIx64,
-        RED, pt, seed, (u64)(key >> 64), (u64)key);
+    print_message("Bitslice test failed. PT=%06x tweak=%016" PRIx64 " Key=%016" PRIx64
+        "%016" PRIx64, RED, pt, tweak, (u64)(key >> 64), (u64)key);
   }
   free(found);
   return err;

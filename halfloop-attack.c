@@ -34,7 +34,7 @@
  * @brief Stores a known plaintext tuple.
  */
 typedef struct {
-  u64 seed;
+  u64 tweak;
   u32 pt;
   u32 ct;
 } tuple_t;
@@ -208,10 +208,10 @@ static int compare_candidate_keys(const void *key1, const void *key2) {
  * @brief Enumerates all possible states before the addition of rk8. Used as input when building the
  * left state table.
  *
- * The two seeds in tp are used in the constuction of the table. Their differences must satisfy
+ * The two tweaks in tp are used in the constuction of the table. Their differences must satisfy
  * the general requirements for the attack.
  *
- * @param tp A pair of plaintext-ciphertext-seed tuples.
+ * @param tp A pair of plaintext-ciphertext-tweak tuples.
  * @param states Return variable for the output table pointer. Must be freed when done.
  * @param num_states the length of the constructed table.
  * @return HALFLOOP_SUCCESS on success.
@@ -225,12 +225,13 @@ static halfloop_result_t get_left_states(tuple_pair_t tp, left_state_t **states,
   *num_states = 0;
   int alloc = 0;
   halfloop_result_t err = HALFLOOP_SUCCESS;
-  u64 seed_diff = tp.a.seed ^ tp.b.seed;
-  u32 rk6_diff = ((seed_diff >> 24) ^ (seed_diff >> 56)) & 0xffffff;
-  u32 rk7_diff = ((seed_diff >> 32) ^  seed_diff)        & 0xffffff;
-  u32 rk8_diff = ((seed_diff >> 40) ^ (seed_diff >> 8))  & 0xffffff;
+  u64 tweak_diff = tp.a.tweak ^ tp.b.tweak;
+  u32 rk6_diff = ((tweak_diff >> 24) ^ (tweak_diff >> 56)) & 0xffffff;
+  u32 rk7_diff = ((tweak_diff >> 32) ^  tweak_diff)        & 0xffffff;
+  u32 rk8_diff = ((tweak_diff >> 40) ^ (tweak_diff >> 8))  & 0xffffff;
   u32 rk7_diff_inv = inv_rotate_rows(inv_mix_columns(rk7_diff));
-  u32 key_inv = inv_rotate_rows(inv_mix_columns(((tp.a.seed >> 32) ^ tp.a.seed) & 0xffffff)) >> 16;
+  u32 key_inv = inv_rotate_rows(inv_mix_columns(((tp.a.tweak >> 32) ^ tp.a.tweak) & 0xffffff))
+      >> 16;
   for (int s = 0; s < 0x1000000; s++) {
     u32 s1 = inv_sub_bytes(inv_rotate_rows(inv_mix_columns(s)));
     u32 s2 = inv_sub_bytes(inv_rotate_rows(inv_mix_columns(s ^ rk8_diff)));
@@ -340,13 +341,13 @@ static halfloop_result_t build_right_table(tuple_pair_t x, tuple_pair_t y, tuple
   u8 cy;
   u8 cz;
   if (middle) {
-    cx = ((x.a.ct >> 8) ^ x.a.seed ^ (x.a.seed >> 32)) & 0xff;
-    cy = ((y.a.ct >> 8) ^ y.a.seed ^ (y.a.seed >> 32)) & 0xff;
-    cz = ((z.a.ct >> 8) ^ z.a.seed ^ (z.a.seed >> 32)) & 0xff;
+    cx = ((x.a.ct >> 8) ^ x.a.tweak ^ (x.a.tweak >> 32)) & 0xff;
+    cy = ((y.a.ct >> 8) ^ y.a.tweak ^ (y.a.tweak >> 32)) & 0xff;
+    cz = ((z.a.ct >> 8) ^ z.a.tweak ^ (z.a.tweak >> 32)) & 0xff;
   } else {
-    cx = ((x.a.ct >> 16) ^ (x.a.seed >> 8) ^ (x.a.seed >> 40)) & 0xff;
-    cy = ((y.a.ct >> 16) ^ (y.a.seed >> 8) ^ (y.a.seed >> 40)) & 0xff;
-    cz = ((z.a.ct >> 16) ^ (z.a.seed >> 8) ^ (z.a.seed >> 40)) & 0xff;
+    cx = ((x.a.ct >> 16) ^ (x.a.tweak >> 8) ^ (x.a.tweak >> 40)) & 0xff;
+    cy = ((y.a.ct >> 16) ^ (y.a.tweak >> 8) ^ (y.a.tweak >> 40)) & 0xff;
+    cz = ((z.a.ct >> 16) ^ (z.a.tweak >> 8) ^ (z.a.tweak >> 40)) & 0xff;
   }
 
   for (int rk10 = 0; rk10 < 0x100; rk10++) {
@@ -431,15 +432,15 @@ static halfloop_result_t find_candidate_keys(tuple_pair_t tp1, tuple_pair_t tp2,
   u8 ctxc = tp1.a.ct & 0xff;
   u8 ctyc = tp2.a.ct & 0xff;
   u8 ctzc = tp3.a.ct & 0xff;
-  u8 tw5x = tp1.a.seed >> 56;
-  u8 tw5y = tp2.a.seed >> 56;
-  u8 tw5z = tp3.a.seed >> 56;
-  u32 tw8x = ((tp1.a.seed >> 8)  ^ (tp1.a.seed >> 40))                      & 0xffffff;
-  u32 tw8y = ((tp2.a.seed >> 8)  ^ (tp2.a.seed >> 40))                      & 0xffffff;
-  u32 tw8z = ((tp3.a.seed >> 8)  ^ (tp3.a.seed >> 40))                      & 0xffffff;
-  u32 tw9x = ((tp1.a.seed >> 16) ^ (tp1.a.seed >> 48) ^ (tp1.a.seed << 16)) & 0xffffff;
-  u32 tw9y = ((tp2.a.seed >> 16) ^ (tp2.a.seed >> 48) ^ (tp2.a.seed << 16)) & 0xffffff;
-  u32 tw9z = ((tp3.a.seed >> 16) ^ (tp3.a.seed >> 48) ^ (tp3.a.seed << 16)) & 0xffffff;
+  u8 tw5x = tp1.a.tweak >> 56;
+  u8 tw5y = tp2.a.tweak >> 56;
+  u8 tw5z = tp3.a.tweak >> 56;
+  u32 tw8x = ((tp1.a.tweak >> 8)  ^ (tp1.a.tweak >> 40))                      & 0xffffff;
+  u32 tw8y = ((tp2.a.tweak >> 8)  ^ (tp2.a.tweak >> 40))                      & 0xffffff;
+  u32 tw8z = ((tp3.a.tweak >> 8)  ^ (tp3.a.tweak >> 40))                      & 0xffffff;
+  u32 tw9x = ((tp1.a.tweak >> 16) ^ (tp1.a.tweak >> 48) ^ (tp1.a.tweak << 16)) & 0xffffff;
+  u32 tw9y = ((tp2.a.tweak >> 16) ^ (tp2.a.tweak >> 48) ^ (tp2.a.tweak << 16)) & 0xffffff;
+  u32 tw9z = ((tp3.a.tweak >> 16) ^ (tp3.a.tweak >> 48) ^ (tp3.a.tweak << 16)) & 0xffffff;
 
   int alloc = 0;
   for (int left_p = 0; left_p < left_table_size; left_p++) {
@@ -544,19 +545,19 @@ static halfloop_result_t candidate_keys_intersection(candidate_key_t *set1,
 }
 
 /**
- * @brief Tests if a candidate 128-bit key is a valid solution for a plaintext-ciphertext-seed
+ * @brief Tests if a candidate 128-bit key is a valid solution for a plaintext-ciphertext-tweak
  * tuple.
  *
  * @param key  a 128 bit key.
  * @param pt   a 24-bit plaintext.
- * @param seed a 64-bit seed.
+ * @param tweak a 64-bit tweak.
  * @param s    a 24-bit ciphertext that should match the one calculated from the other three
  *             parameters.
  * @return true if the key matches.
  */
-static bool test_key(u128 key, u32 pt, u64 seed, u32 s) {
+static bool test_key(u128 key, u32 pt, u64 tweak, u32 s) {
   u32 rk[11];
-  key_schedule(rk, key, seed);
+  key_schedule(rk, key, tweak);
   u32 ct = pt ^ rk[0];
   for(int i = 1; i < 8; i++) {
     ct = mix_columns(rotate_rows(sub_bytes(ct))) ^ rk[i];
@@ -617,25 +618,25 @@ static void* brute_force_thread(void *a) {
   while (!args->success && (rk7_i = get_next_rk(args)) < 0x10000) {
     u128 key2 = args->candidate.rk8910 | ((u128)args->candidate.rk5b << 120);
     key2 |= (u128)mix_columns(rotate_rows(rk7_i | ((u32)args->candidate.lt.key << 16))) << 64;
-    u128 pkey = key2 ^ (u128)args->tp1.a.seed;
-    pkey ^= (u128)args->tp1.a.seed << 32;
-    pkey ^= (u128)args->tp1.a.seed << 64;
-    pkey ^= (u128)args->tp1.a.seed >> 32;
+    u128 pkey = key2 ^ (u128)args->tp1.a.tweak;
+    pkey ^= (u128)args->tp1.a.tweak << 32;
+    pkey ^= (u128)args->tp1.a.tweak << 64;
+    pkey ^= (u128)args->tp1.a.tweak >> 32;
     if (halfloop_bitslice(args->tp1.a.pt, args->candidate.lt.sx, pkey, &found, &num_found)
         != HALFLOOP_SUCCESS) {
       break;
     }
-    u32 rk56_diff = (args->tp1.a.seed >> 24) ^ (args->tp1.a.seed >> 56);
+    u32 rk56_diff = (args->tp1.a.tweak >> 24) ^ (args->tp1.a.tweak >> 56);
     for (int i = 0; i < num_found; i++) {
       key2 &= ~((u128)(0x00ffffffff000000) << 64);
       key2 |= (u128)(found[i] ^ rk56_diff) << 88;
       u128 key1 = (key2 ^ (key2 >> 32)) & (((u128)0xffffffff << 64) | ~0ULL);
       key1 |= ((u128)key_schedule_g(key1 & 0xffffffff, 1) << 96)
           ^ (key2 & ((u128)0xffffffff << 96));
-      if (!(test_key(key1, args->tp2.a.pt, args->tp2.a.seed, args->candidate.lt.sy))) {
+      if (!(test_key(key1, args->tp2.a.pt, args->tp2.a.tweak, args->candidate.lt.sy))) {
         continue;
       }
-      if (!(test_key(key1, args->tp3.a.pt, args->tp3.a.seed, args->candidate.lt.sz))) {
+      if (!(test_key(key1, args->tp3.a.pt, args->tp3.a.tweak, args->candidate.lt.sz))) {
         continue;
       }
       print_message("Found key: %016" PRIx64 "%016" PRIx64, GREEN, (u64)(key1 >> 64), (u64)key1);
@@ -714,7 +715,7 @@ error:
 }
 
 /**
- * @brief Reads plaintext-ciphertext-seed tuples from a text file.
+ * @brief Reads plaintext-ciphertext-tweak tuples from a text file.
  *
  * @param fname      the file name of the input file.
  * @param tuples     return pointer. Will contain a list of tuples on return.
@@ -737,7 +738,7 @@ static halfloop_result_t read_input_tuples(const char *fname, tuple_t **tuples, 
 
   while (!feof(fp)) {
     tuple_t tuple;
-    if (fscanf(fp, "%06x %06x %016" PRIx64 "\n", &tuple.pt, &tuple.ct, &tuple.seed) == 3) {
+    if (fscanf(fp, "%06x %06x %016" PRIx64 "\n", &tuple.pt, &tuple.ct, &tuple.tweak) == 3) {
       if (*num_tuples == num_alloc) {
         num_alloc += 1000;
         tuple_t *tmp = realloc(*tuples, sizeof(tuple_t) * num_alloc);
@@ -783,7 +784,7 @@ error:
  * @brief Searches through a list of tuples for good pairs that can be used for the attack. The
  * function uses a sub-optimal O(n^2) algorithm, which may make it slow for very large lists.
  *
- * @param tuples a list if plaintext-ciphertext-seed tuples.
+ * @param tuples a list if plaintext-ciphertext-tweak tuples.
  * @param num_tuples the number of tuples in the list.
  * @param pairs output list of found good pairs. Must be freed.
  * @param num_pairs the number of found good pairs in the output list.
@@ -802,7 +803,7 @@ static halfloop_result_t get_good_pairs(tuple_t *tuples, int num_tuples, tuple_p
 
   for (int i = 0; i < num_tuples; i++) {
     for (int j = i + 1; j < num_tuples; j++) {
-      u64 sdiff = tuples[i].seed ^ tuples[j].seed;
+      u64 sdiff = tuples[i].tweak ^ tuples[j].tweak;
       u32 pdiff = tuples[i].pt   ^ tuples[j].pt;
       u32 cdiff = tuples[i].ct   ^ tuples[j].ct;
       if ((pdiff & 0xffff00) != 0

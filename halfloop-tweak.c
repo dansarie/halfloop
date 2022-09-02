@@ -22,27 +22,27 @@
 
 int main(int argc, char *argv[]) {
   if (argc != 2) {
-    fprintf(stderr, "Interprets an ALE seed.\n");
-    fprintf(stderr, "Usage: %s hex_seed\n", argv[0]);
+    fprintf(stderr, "Interprets an ALE tweak.\n");
+    fprintf(stderr, "Usage: %s hex_tweak\n", argv[0]);
     return 1;
   }
   u64 s = strtoull(argv[1], NULL, 16);
-  printf("Seed:        %016" PRIx64 "\n", s);
+  printf("Tweak:       %016" PRIx64 "\n", s);
 
-  seed_t seed;
-  if (parse_seed(s, &seed) != HALFLOOP_SUCCESS) {
+  tweak_t tweak;
+  if (parse_tweak(s, &tweak) != HALFLOOP_SUCCESS) {
     fprintf(stderr, "Format error.\n");
     return 1;
   }
 
-  printf("Month:       %d\n", seed.month);
-  printf("Day:         %d\n", seed.day);
-  printf("Coarse time: %d\n", seed.coarse_time);
-  printf("Fine time:   %d\n", seed.fine_time);
-  printf("Time:        %02d:%02d:%02d\n", seed.coarse_time / 60, seed.coarse_time % 60,
-      seed.fine_time);
-  printf("Word:        %d\n", seed.word);
-  printf("Frequency:   %.1f kHz\n", seed.frequency / 1000.0);
+  printf("Month:       %d\n", tweak.month);
+  printf("Day:         %d\n", tweak.day);
+  printf("Coarse time: %d\n", tweak.coarse_time);
+  printf("Fine time:   %d\n", tweak.fine_time);
+  printf("Time:        %02d:%02d:%02d\n", tweak.coarse_time / 60, tweak.coarse_time % 60,
+      tweak.fine_time);
+  printf("Word:        %d\n", tweak.word);
+  printf("Frequency:   %.1f kHz\n", tweak.frequency / 1000.0);
 
   return 0;
 }

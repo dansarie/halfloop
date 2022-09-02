@@ -10,7 +10,7 @@ attack.
 
 The related tweak attack requires at least three good pairs of plaintext, ciphertext, and tweak. A
 utility, `halfloop-generate-data`, that generates random good pairs is provided for testing. Another
-utility, `halfloop-seed`, aids in interpreting the data format of HALFLOOP-24 tweaks.
+utility, `halfloop-tweak`, aids in interpreting the data format of HALFLOOP-24 tweaks.
 
 ## System requirements
 
@@ -50,9 +50,9 @@ print them to stdout.
 ./halfloop-generate-data 4 > data.txt
 ```
 
-Use `halfloop-seed` to interpret a hexadecimal tweak value.
+Use `halfloop-tweak` to interpret a hexadecimal tweak value.
 ```console
-./halfloop-seed 543bd88000017550
+./halfloop-tweak 543bd88000017550
 ```
 
 Use the test data to perform an attack. If more than three good pairs are available, the program

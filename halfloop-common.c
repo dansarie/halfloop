@@ -146,11 +146,11 @@ u32 key_schedule_g(u32 key_word, u32 rc) {
         ^  SBOX[b0];
 }
 
-halfloop_result_t key_schedule(u32 *rk, u128 key, u64 seed) {
+halfloop_result_t key_schedule(u32 *rk, u128 key, u64 tweak) {
   if (rk == NULL) {
     return HALFLOOP_BAD_ARGUMENT;
   }
-  key     =   key ^ ((u128)seed << 64);
+  key     =   key ^ ((u128)tweak << 64);
   rk[0]   =  (key >> 104) & 0xFFFFFF;
   rk[1]   =  (key >> 80)  & 0xFFFFFF;
   rk[2]   =  (key >> 56)  & 0xFFFFFF;
@@ -190,13 +190,13 @@ static u32 halfloop_encrypt_round(u32 state, u32 round_key, bool last_round) {
   return state ^ round_key;
 }
 
-halfloop_result_t halfloop_encrypt(u32 pt, u128 key, u64 seed, u32 *ct) {
+halfloop_result_t halfloop_encrypt(u32 pt, u128 key, u64 tweak, u32 *ct) {
   if ((pt & 0xFF000000) != 0 || ct == NULL) {
     return HALFLOOP_BAD_ARGUMENT;
   }
   halfloop_result_t err = HALFLOOP_SUCCESS;
   u32 rk[11] = {0};
-  RETURN_ON_ERROR(key_schedule(rk, key, seed));
+  RETURN_ON_ERROR(key_schedule(rk, key, tweak));
   *ct = pt ^ rk[0];
   for(int i = 1; i < 10; i++) {
     *ct = halfloop_encrypt_round(*ct, rk[i], false);
@@ -206,13 +206,13 @@ error:
   return err;
 }
 
-halfloop_result_t halfloop_decrypt(u32 ct, u128 key, u64 seed, u32 *pt) {
+halfloop_result_t halfloop_decrypt(u32 ct, u128 key, u64 tweak, u32 *pt) {
   if((ct & 0xFF000000) != 0 || pt == NULL) {
     return HALFLOOP_BAD_ARGUMENT;
   }
   halfloop_result_t err = HALFLOOP_SUCCESS;
   u32 rk[11] = {0};
-  RETURN_ON_ERROR(key_schedule(rk, key, seed));
+  RETURN_ON_ERROR(key_schedule(rk, key, tweak));
   *pt = halfloop_decrypt_round(ct, rk[10], true);
   for(int i = 9; i > 0; i--){
     *pt = halfloop_decrypt_round(*pt, rk[i], false);
@@ -224,7 +224,7 @@ error:
 
 halfloop_result_t test_halfloop() {
   u128 key = ((u128)0x2b7e151628aed2a6 << 64) | 0xabf7158809cf4f3c;
-  u64 seed = 0x543bd88000017550;
+  u64 tweak = 0x543bd88000017550;
   u32 pt = 0x010203;
   u32 ct = 0xf28c1e;
   u32 ct_test = 0;
@@ -234,9 +234,9 @@ halfloop_result_t test_halfloop() {
   for (int i = 0; i < 0x100; i++) {
     RETURN_IF(inv_SBOX[SBOX[i]] != i, HALFLOOP_INTERNAL_ERROR);
   }
-  halfloop_encrypt(pt, key, seed, &ct_test);
+  halfloop_encrypt(pt, key, tweak, &ct_test);
   RETURN_IF(ct_test != ct, HALFLOOP_INTERNAL_ERROR);
-  halfloop_decrypt(ct, key, seed, &pt_test);
+  halfloop_decrypt(ct, key, tweak, &pt_test);
   RETURN_IF(pt_test != pt, HALFLOOP_INTERNAL_ERROR);
 error:
   return err;
@@ -281,74 +281,74 @@ error:
 }
 
 /**
- * @brief Checks a HALFLOOP seed structure to ensure all values are compliant with the
+ * @brief Checks a HALFLOOP tweak structure to ensure all values are compliant with the
  * specification.
  *
- * @param seed a HALFLOOP seed structure.
+ * @param tweak a HALFLOOP tweak structure.
  * @return halfloop_result_t HALFLOOP_SUCCESS if the values in the structure are compliant.
  */
-static halfloop_result_t check_seed(seed_t seed) {
+static halfloop_result_t check_tweak(tweak_t tweak) {
   int days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-  if (   seed.month < 1
-      || seed.month > 12
-      || seed.day < 1
-      || seed.day > days[seed.month - 1]
-      || seed.coarse_time < 0
-      || seed.coarse_time >= 1440
-      || seed.fine_time < 0
-      || seed.fine_time >= 60
-      || seed.word < 0
-      || seed.word > 255
-      || seed.zero != 0
-      || seed.frequency <= 0
-      || seed.frequency >= 1000000000
-      || seed.frequency % 100 != 0) {
+  if (   tweak.month < 1
+      || tweak.month > 12
+      || tweak.day < 1
+      || tweak.day > days[tweak.month - 1]
+      || tweak.coarse_time < 0
+      || tweak.coarse_time >= 1440
+      || tweak.fine_time < 0
+      || tweak.fine_time >= 60
+      || tweak.word < 0
+      || tweak.word > 255
+      || tweak.zero != 0
+      || tweak.frequency <= 0
+      || tweak.frequency >= 1000000000
+      || tweak.frequency % 100 != 0) {
     return HALFLOOP_FORMAT_ERROR;
   }
   return HALFLOOP_SUCCESS;
 }
 
-halfloop_result_t parse_seed(u64 seed, seed_t *parsed) {
-  seed_t p = {
-    .month       =  seed >> 60,
-    .day         = (seed >> 55) & 0x1f,
-    .coarse_time = (seed >> 44) & 0x3ff,
-    .fine_time   = (seed >> 38) & 0x3f,
-    .word        = (seed >> 30) & 0xff,
-    .zero        = (seed >> 28) & 0x3,
+halfloop_result_t parse_tweak(u64 tweak, tweak_t *parsed) {
+  tweak_t p = {
+    .month       =  tweak >> 60,
+    .day         = (tweak >> 55) & 0x1f,
+    .coarse_time = (tweak >> 44) & 0x3ff,
+    .fine_time   = (tweak >> 38) & 0x3f,
+    .word        = (tweak >> 30) & 0xff,
+    .zero        = (tweak >> 28) & 0x3,
     .frequency   = 0
   };
   for (int i = 0; i < 7; i++) {
     p.frequency *= 10;
-    int d = (seed >> (24 - i * 4)) & 0xf;
+    int d = (tweak >> (24 - i * 4)) & 0xf;
     if (d >= 10) {
       return HALFLOOP_FORMAT_ERROR;
     }
     p.frequency += d;
   }
   p.frequency *= 100;
-  if (check_seed(p) != HALFLOOP_SUCCESS) {
+  if (check_tweak(p) != HALFLOOP_SUCCESS) {
     return HALFLOOP_FORMAT_ERROR;
   }
-  memcpy(parsed, &p, sizeof(seed_t));
+  memcpy(parsed, &p, sizeof(tweak_t));
   return HALFLOOP_SUCCESS;
 }
 
-halfloop_result_t create_seed(seed_t values, u64 *seed) {
-  if (seed == NULL) {
+halfloop_result_t create_tweak(tweak_t values, u64 *tweak) {
+  if (tweak == NULL) {
     return HALFLOOP_BAD_ARGUMENT;
   }
-  if (check_seed(values) != HALFLOOP_SUCCESS) {
+  if (check_tweak(values) != HALFLOOP_SUCCESS) {
     return HALFLOOP_FORMAT_ERROR;
   }
-  *seed  = (u64)values.month << 60;
-  *seed |= (u64)values.day << 55;
-  *seed |= (u64)values.coarse_time << 44;
-  *seed |= (u64)values.fine_time << 38;
-  *seed |= (u64)values.word << 30;
+  *tweak  = (u64)values.month << 60;
+  *tweak |= (u64)values.day << 55;
+  *tweak |= (u64)values.coarse_time << 44;
+  *tweak |= (u64)values.fine_time << 38;
+  *tweak |= (u64)values.word << 30;
   values.frequency /= 100;
   for (int i = 0; i < 7; i++) {
-    *seed |= (values.frequency % 10) << i * 4;
+    *tweak |= (values.frequency % 10) << i * 4;
     values.frequency /= 10;
   }
   return HALFLOOP_SUCCESS;
