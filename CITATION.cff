@@ -1,0 +1,88 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite the article from
+  preferred-citation.
+
+title: Implementation of attacks on HALFLOOP-24
+authors:
+  - given-names: Marcus
+    family-names: Dansarie
+    affiliation: >-
+      Swedish Defence University, Stockholm, Sweden;
+      University of Skövde, Skövde, Sweden
+    orcid: 'https://orcid.org/0000-0001-9246-0263'
+  - family-names: Derbez
+    given-names: Patrick
+    affiliation: >-
+      Univ Rennes, Centre National de la Recherche
+      Scientifique (CNRS), Institut de Recherche en
+      Informatique et Systèmes Aléatoires (IRISA),
+      Rennes, France
+  - family-names: Leander
+    given-names: Gregor
+    affiliation: 'Ruhr University Bochum, Bochum, Germany'
+    orcid: 'https://orcid.org/0000-0002-2579-8587'
+  - family-names: Stennes
+    given-names: Lukas
+    affiliation: 'Ruhr University Bochum, Bochum, Germany'
+license: GPL-3.0
+
+preferred-citation:
+  type: article
+  title: Breaking HALFLOOP-24
+  journal: IACR Transactions on Symmetric Cryptology
+  year: 2022
+  volume: 2022
+  issue: 3
+  authors:
+    - given-names: Marcus
+      family-names: Dansarie
+      affiliation: >-
+        Swedish Defence University, Stockholm, Sweden;
+        University of Skövde, Skövde, Sweden
+      orcid: 'https://orcid.org/0000-0001-9246-0263'
+    - family-names: Derbez
+      given-names: Patrick
+      affiliation: >-
+        Univ Rennes, Centre National de la Recherche
+        Scientifique (CNRS), Institut de Recherche en
+        Informatique et Systèmes Aléatoires (IRISA),
+        Rennes, France
+    - family-names: Leander
+      given-names: Gregor
+      affiliation: 'Ruhr University Bochum, Bochum, Germany'
+      orcid: 'https://orcid.org/0000-0002-2579-8587'
+    - family-names: Stennes
+      given-names: Lukas
+      affiliation: 'Ruhr University Bochum, Bochum, Germany'
+  identifiers:
+    - type: doi
+      value: 10.46586/tosc.v2022.i3.217-238
+      description: The encompassing academic article
+  abstract: >-
+    HALFLOOP-24 is a tweakable block cipher that is
+    used to protect automatic link establishment
+    messages in high frequency radio, a technology
+    commonly used by government agencies and industries
+    that need highly robust long-distance
+    communications. We present the first public
+    cryptanalysis of HALFLOOP-24 and show that
+    HALFLOOP-24, despite its key size of 128 bits, is
+    far from providing 128 bit security. More
+    precisely, we give attacks for ciphertext-only,
+    known-plaintext, chosen-plaintext and
+    chosen-ciphertext scenarios. In terms of their
+    complexities, most of them can be considered
+    practical. However, in the real world, the amount
+    of available data is too low for our attacks to
+    work. Our strongest attack, a boomerang
+    key-recovery, finds the first round key with less
+    than 2<sup>10</sup> encryption and decryption
+    queries. In conclusion, we strongly advise against
+    using HALFLOOP-24.
+  keywords:
+    - HF Radio
+    - ALE
+    - HALFLOOP
+    - Boomerang
+  license: CC-BY-4.0

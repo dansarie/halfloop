@@ -5,9 +5,9 @@
 
 HALFLOOP-24 is a cipher specified in MIL-STD-188-141 and used for encrypting Automatic Link
 Etablishment (ALE) frames in the second and third generations of the ALE standards. This repository
-contains implementations of the attacks on HALFLOOP-24 described in Breaking HALFLOOP-24. A
-bitslicing implementation of HALFLOOP-24 is used for the brute force key search phase of the main
-attack.
+contains implementations of the attacks on HALFLOOP-24 described in
+[Breaking HALFLOOP-24](https://doi.org/10.46586/tosc.v2022.i3.217-238). A bitslicing implementation
+of HALFLOOP-24 is used for the brute force key search phase of the main attack.
 
 The related tweak attack requires at least three good pairs of plaintext, ciphertext, and tweak. A
 utility, `halfloop-generate-data`, that generates random good pairs is provided for testing. Another
@@ -69,6 +69,16 @@ search phase. By default, one thread per processor is created.
 ```console
 ./halfloop-attack -t 4 data.txt
 ```
+
+## Citing
+
+If you use this software, please cite the following article:
+```
+Dansarie, M., Derbez, P., Leander, G., & Stennes, L. (2022). Breaking HALFLOOP-24.
+IACR Transactions on Symmetric Cryptology, 2022(3), 217–238.
+https://doi.org/10.46586/tosc.v2022.i3.217-238
+```
+Citation information is also provided in [CITATION.cff](CITATION.cff).
 
 ## License
 
