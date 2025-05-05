@@ -1,6 +1,6 @@
 /* Implementation of attacks on HALFLOOP-24.
 
-   Copyright (C) 2022 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
+   Copyright (C) 2022-2025 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
    Lukas Stennes.
 
    This program is free software: you can redistribute it and/or modify
@@ -36,8 +36,8 @@
  * @param operations increased by one for every pair of encryption/decryption performed.
  * @return halfloop_result_t
  */
-halfloop_result_t restore_byte(u128 key, u64 tweak0, u32 pt0, u32 ct0, u32 pt0x, u8 beta, u8 gamma,
-    u8 n, int *operations) {
+halfloop_result_t restore_byte(const u64 *key, u64 tweak0, u32 pt0, u32 ct0, u32 pt0x, u8 beta,
+    u8 gamma, u8 n, int *operations) {
   if ((pt0 & 0xff000000) != 0 || (ct0 & 0xff000000) != 0 || beta == 0 || gamma == 0 || n >= 3
       || operations == NULL) {
     return HALFLOOP_BAD_ARGUMENT;
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
   u32 ct0 = 0;
   u32 pt0x = 0;
   u64 tweak0 = 0;
-  u128 key = 0;
+  u64 key[2] = {0};
   int operations = 0;
   halfloop_result_t err = HALFLOOP_SUCCESS;
 
@@ -112,13 +112,13 @@ int main(int argc, char *argv[]) {
   RETURN_ON_ERROR(random_bytes(&pt0, sizeof(u32)));
   pt0 &= 0xffffff;
   RETURN_ON_ERROR(random_bytes(&tweak0, sizeof(u64)));
-  RETURN_ON_ERROR(random_bytes(&key, sizeof(u128)));
+  RETURN_ON_ERROR(random_bytes(&key, sizeof(u64) * 2));
 
   RETURN_ON_ERROR(halfloop_encrypt(pt0, key, tweak0, &ct0));
   RETURN_ON_ERROR(halfloop_decrypt(ct0, key, tweak0 ^ GAMMA_SHIFT(gamma), &pt0x));
   operations += 1;
 
-  print_message("Key:        %016" PRIx64 "%016" PRIx64, WHITE, (u64)(key >> 64), (u64)key);
+  print_message("Key:        %016" PRIx64 "%016" PRIx64, WHITE, key[0], key[1]);
   print_message("tweak:       %016" PRIx64, WHITE, tweak0);
   print_message("Plaintext:  %06x", WHITE, pt0);
   print_message("Ciphertext: %06x", WHITE, ct0);

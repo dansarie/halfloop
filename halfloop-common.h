@@ -1,6 +1,6 @@
 /* Implementation of attacks on HALFLOOP-24.
 
-   Copyright (C) 2022 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
+   Copyright (C) 2022-2025 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
    Lukas Stennes.
 
    This program is free software: you can redistribute it and/or modify
@@ -30,7 +30,6 @@ typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
-typedef __uint128_t u128;
 
 /**
  * @brief The Rijndael S-box.
@@ -254,32 +253,32 @@ u32 key_schedule_g(u32 key_word, u32 rc);
  * @brief Performs the HALFLOOP-24 key schedule.
  *
  * @param rk   the round the output vector. Must be a pointer to an array of length 11.
- * @param key  the 128-bit key.
+ * @param key  the 128-bit key as two 64-bit integers.
  * @param tweak the 64-bit tweak.
  */
-halfloop_result_t key_schedule(u32 *rk, u128 key, u64 tweak);
+halfloop_result_t key_schedule(u32 *rk, const u64 *key, u64 tweak);
 
 /**
  * @brief Encrypts a HALFLOOP-24 plaintext.
  *
  * @param pt   the 24-bit plaintext to encrypt. The most significant eight bits must be zero.
- * @param key  the 128-bit key to use for the encryption.
+ * @param key  the 128-bit key to use for the encryption as two 64-bit integers.
  * @param tweak the 64-bit tweak to use for the encryption.
  * @param ct   the encrypted 24-bit ciphertext.
  * @return HALFLOOP_SUCCESS on success.
  */
-halfloop_result_t halfloop_encrypt(u32 pt, u128 key, u64 tweak, u32 *ct);
+halfloop_result_t halfloop_encrypt(u32 pt, const u64 *key, u64 tweak, u32 *ct);
 
 /**
  * @brief Decrypts a HALFLOOP-24 ciphertext.
  *
  * @param ct   the 24-bit ciphertext to decrypt. The most significant eight bits must be zero.
- * @param key  the 128-bit key to use for the decryption.
+ * @param key  the 128-bit key to use for the decryption as two 64-bit integers.
  * @param tweak the 64-bit tweak to use for the decryption.
  * @param pt   the decrypted 24-bit plaintext.
  * @return HALFLOOP_SUCCESS on success.
  */
-halfloop_result_t halfloop_decrypt(u32 ct, u128 key, u64 tweak, u32 *pt);
+halfloop_result_t halfloop_decrypt(u32 ct, const u64 *key, u64 tweak, u32 *pt);
 
 /**
  * @brief Initializes various data structures that are used by the functions that implement

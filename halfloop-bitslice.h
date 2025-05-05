@@ -1,6 +1,6 @@
 /* Implementation of attacks on HALFLOOP-24.
 
-   Copyright (C) 2022 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
+   Copyright (C) 2022-2025 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
    Lukas Stennes.
 
    This program is free software: you can redistribute it and/or modify
@@ -27,16 +27,16 @@
  *
  * @param pt a 24-bit plaintext.
  * @param ct a 24-bit ciphertext.
- * @param pkey a partial candidate key. The least significant 88 bits represent round keys 7, 8, 9,
- * and the most significant two bytes of round key 10. The most significant 8 bits represent the
- * middle 8 bits in round key 5. The remaining 32 bits are ignored.
+ * @param pkey a partial candidate key as two 64-bit integers. The least significant 88 bits
+ * represent round keys 7, 8, 9, and the most significant two bytes of round key 10. The most
+ * significant 8 bits represent the middle 8 bits in round key 5. The remaining 32 bits are ignored.
  * @param found return pointer to a list of found matches. The pointer must be freed. The 8 most
  * significant bits in each item represent the least significant byte of round key five. The
  * remaining 24 bits represent round key 6.
  * @param num_found returns the number of keys in found.
  * @return halfloop_result_t HALFLOOP_SUCCESS on success.
  */
-halfloop_result_t halfloop_bitslice(u32 pt, u32 ct, u128 pkey, u32 **found, int *num_found);
+halfloop_result_t halfloop_bitslice(u32 pt, u32 ct, const u64 *pkey, u32 **found, int *num_found);
 
 /**
  * @brief Tests the HALFLOOP-24 bitslice implementation and prints information to the console.

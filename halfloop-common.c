@@ -1,6 +1,6 @@
 /* Implementation of attacks on HALFLOOP-24.
 
-   Copyright (C) 2022 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
+   Copyright (C) 2022-2025 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
    Lukas Stennes.
 
    This program is free software: you can redistribute it and/or modify
@@ -146,29 +146,29 @@ u32 key_schedule_g(u32 key_word, u32 rc) {
         ^  SBOX[b0];
 }
 
-halfloop_result_t key_schedule(u32 *rk, u128 key, u64 tweak) {
+halfloop_result_t key_schedule(u32 *rk, const u64 *key, u64 tweak) {
   if (rk == NULL) {
     return HALFLOOP_BAD_ARGUMENT;
   }
-  key     =   key ^ ((u128)tweak << 64);
-  rk[0]   =  (key >> 104) & 0xFFFFFF;
-  rk[1]   =  (key >> 80)  & 0xFFFFFF;
-  rk[2]   =  (key >> 56)  & 0xFFFFFF;
-  rk[3]   =  (key >> 32)  & 0xFFFFFF;
-  rk[4]   =  (key >> 8)   & 0xFFFFFF;
-  rk[5]   =  (key & 0xFF) << 16;
-  key    ^= (u128)key_schedule_g(key & 0xFFFFFFFF, 1) << 96;
-  key    ^= ((key >> 96)  & 0xFFFFFFFF) << 64;
-  key    ^= ((key >> 64)  & 0xFFFFFFFF) << 32;
-  key    ^= ((key >> 32)  & 0xFFFFFFFF) <<  0;
-  rk[5]  |=  (key >> 112) & 0xFFFF;
-  rk[6]   =  (key >> 88)  & 0xFFFFFF;
-  rk[7]   =  (key >> 64)  & 0xFFFFFF;
-  rk[8]   =  (key >> 40)  & 0xFFFFFF;
-  rk[9]   =  (key >> 16)  & 0xFFFFFF;
-  rk[10]  = ((key >> 0)   & 0xFFFF) << 8;
-  key    ^= (u128)key_schedule_g(key & 0xFFFFFFFF, 2) << 96;
-  rk[10] |= (key >> 120)  & 0xFF;
+  u64 tk[2] = {key[0] ^ tweak, key[1]}; /* XOR tweak with first 64 bits of key. */
+  rk[0]   =   tk[0] >> 40;
+  rk[1]   =  (tk[0] >> 16) & 0xFFFFFF;
+  rk[2]   = ((tk[0] << 8) | (tk[1] >> 56)) & 0xFFFFFF;
+  rk[3]   =  (tk[1] >> 32) & 0xFFFFFF;
+  rk[4]   =  (tk[1] >> 8)  & 0xFFFFFF;
+  rk[5]   =  (tk[1] << 16) & 0xFF0000;
+  tk[0]  ^=  (u64)key_schedule_g(tk[1] & 0xFFFFFFFF, 1) << 32;
+  tk[0]  ^=   tk[0] >> 32;
+  tk[1]  ^=   tk[0] << 32;
+  tk[1]  ^=   tk[1] >> 32;
+  rk[5]  |=  (tk[0] >> 48);
+  rk[6]   =  (tk[0] >> 24) & 0xFFFFFF;
+  rk[7]   =   tk[0] & 0xFFFFFF;
+  rk[8]   =   tk[1] >> 40;
+  rk[9]   =  (tk[1] >> 16) & 0xFFFFFF;
+  rk[10]  =  (tk[1] & 0xFFFF) << 8;
+  tk[0]  ^=  (u64)key_schedule_g(tk[1] & 0xFFFFFFFF, 2) << 32;
+  rk[10] |=  tk[0] >> 56;
   return HALFLOOP_SUCCESS;
 }
 
@@ -190,7 +190,7 @@ static u32 halfloop_encrypt_round(u32 state, u32 round_key, bool last_round) {
   return state ^ round_key;
 }
 
-halfloop_result_t halfloop_encrypt(u32 pt, u128 key, u64 tweak, u32 *ct) {
+halfloop_result_t halfloop_encrypt(u32 pt, const u64 *key, u64 tweak, u32 *ct) {
   if ((pt & 0xFF000000) != 0 || ct == NULL) {
     return HALFLOOP_BAD_ARGUMENT;
   }
@@ -206,7 +206,7 @@ error:
   return err;
 }
 
-halfloop_result_t halfloop_decrypt(u32 ct, u128 key, u64 tweak, u32 *pt) {
+halfloop_result_t halfloop_decrypt(u32 ct, const u64 *key, u64 tweak, u32 *pt) {
   if((ct & 0xFF000000) != 0 || pt == NULL) {
     return HALFLOOP_BAD_ARGUMENT;
   }
@@ -223,7 +223,7 @@ error:
 }
 
 halfloop_result_t test_halfloop() {
-  u128 key = ((u128)0x2b7e151628aed2a6 << 64) | 0xabf7158809cf4f3c;
+  u64 key[2] = {0x2b7e151628aed2a6ULL, 0xabf7158809cf4f3cULL};
   u64 tweak = 0x543bd88000017550;
   u32 pt = 0x010203;
   u32 ct = 0xf28c1e;

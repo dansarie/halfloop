@@ -1,6 +1,6 @@
 /* Implementation of attacks on HALFLOOP-24.
 
-   Copyright (C) 2022 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
+   Copyright (C) 2022-2025 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
    Lukas Stennes.
 
    This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
   u32 pt0 = 0;
   u32 ct[256] = {0};
   u64 tweak0 = 0;
-  u128 key = 0;
+  u64 key[2] = {0};
   tweak_t tweak = {0};
   struct timespec timer;
   halfloop_result_t err = HALFLOOP_SUCCESS;
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
   RETURN_ON_ERROR(init_halfloop());
   RETURN_ON_ERROR(test_halfloop());
 
-  RETURN_ON_ERROR(random_bytes(&key, sizeof(u128)));
+  RETURN_ON_ERROR(random_bytes(&key, sizeof(u64) * 2));
   RETURN_ON_ERROR(random_bytes(&tweak, sizeof(tweak)));
   tweak.month = (ABS(tweak.month) % 12) + 1;
   int days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
   tweak.frequency = (ABS(tweak.frequency) % 270000) * 100 + 3000000;
   RETURN_ON_ERROR(create_tweak(tweak, &tweak0));
 
-  fprintf(stderr, "Key: %016" PRIx64 "%016" PRIx64 "\n", (u64)(key >> 64), (u64)key);
+  fprintf(stderr, "Key: %016" PRIx64 "%016" PRIx64 "\n", key[0], key[1]);
 
   TIMER_START(&timer);
   while (found < num_pairs) {

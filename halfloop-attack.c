@@ -1,6 +1,6 @@
 /* Implementation of attacks on HALFLOOP-24.
 
-   Copyright (C) 2022 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
+   Copyright (C) 2022-2025 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
    Lukas Stennes.
 
    This program is free software: you can redistribute it and/or modify
@@ -555,7 +555,7 @@ static halfloop_result_t candidate_keys_intersection(candidate_key_t *set1,
  *             parameters.
  * @return true if the key matches.
  */
-static bool test_key(u128 key, u32 pt, u64 tweak, u32 s) {
+static bool test_key(const u64 *key, u32 pt, u64 tweak, u32 s) {
   u32 rk[11];
   key_schedule(rk, key, tweak);
   u32 ct = pt ^ rk[0];
@@ -616,30 +616,34 @@ static void* brute_force_thread(void *a) {
 
   int rk7_i;
   while (!args->success && (rk7_i = get_next_rk(args)) < 0x10000) {
-    u128 key2 = args->candidate.rk8910 | ((u128)args->candidate.rk5b << 120);
-    key2 |= (u128)mix_columns(rotate_rows(rk7_i | ((u32)args->candidate.lt.key << 16))) << 64;
-    u128 pkey = key2 ^ (u128)args->tp1.a.tweak;
-    pkey ^= (u128)args->tp1.a.tweak << 32;
-    pkey ^= (u128)args->tp1.a.tweak << 64;
-    pkey ^= (u128)args->tp1.a.tweak >> 32;
+    u64 key2[2] = {(u64)args->candidate.rk5b << 56,  args->candidate.rk8910};
+    key2[0] |= (u64)mix_columns(rotate_rows(rk7_i | ((u32)args->candidate.lt.key << 16)));
+    u64 pkey[2] = {key2[0], key2[1] ^ args->tp1.a.tweak};
+    pkey[0] ^= args->tp1.a.tweak >> 32;
+    pkey[1] ^= args->tp1.a.tweak << 32;
+    pkey[0] ^= args->tp1.a.tweak;
+    pkey[1] ^= args->tp1.a.tweak >> 32;
     if (halfloop_bitslice(args->tp1.a.pt, args->candidate.lt.sx, pkey, &found, &num_found)
         != HALFLOOP_SUCCESS) {
       break;
     }
     u32 rk56_diff = (args->tp1.a.tweak >> 24) ^ (args->tp1.a.tweak >> 56);
     for (int i = 0; i < num_found; i++) {
-      key2 &= ~((u128)(0x00ffffffff000000) << 64);
-      key2 |= (u128)(found[i] ^ rk56_diff) << 88;
-      u128 key1 = (key2 ^ (key2 >> 32)) & (((u128)0xffffffff << 64) | ~0ULL);
-      key1 |= ((u128)key_schedule_g(key1 & 0xffffffff, 1) << 96)
-          ^ (key2 & ((u128)0xffffffff << 96));
+      key2[0] &= ~0x00ffffffff000000ULL;
+      key2[0] |= (u64)(found[i] ^ rk56_diff) << 24;
+      u64 key1[2] = {
+        (key2[0] ^ (key2[0] >> 32)) & 0xffffffff,
+        key2[1] ^ (key2[0] << 32) ^ (key2[1] >> 32)
+      };
+      key1[0] |= ((u64)key_schedule_g(key1[1] & 0xffffffff, 1) << 32)
+          ^ (key2[0] & (0xffffffffULL << 32));
       if (!(test_key(key1, args->tp2.a.pt, args->tp2.a.tweak, args->candidate.lt.sy))) {
         continue;
       }
       if (!(test_key(key1, args->tp3.a.pt, args->tp3.a.tweak, args->candidate.lt.sz))) {
         continue;
       }
-      print_message("Found key: %016" PRIx64 "%016" PRIx64, GREEN, (u64)(key1 >> 64), (u64)key1);
+      print_message("Found key: %016" PRIx64 "%016" PRIx64, GREEN, key1[0], key1[1]);
       /* Stop remaining threads and return. */
       args->success = true;
       free(found);

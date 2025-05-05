@@ -1,6 +1,6 @@
 /* Implementation of attacks on HALFLOOP-24.
 
-   Copyright (C) 2022 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
+   Copyright (C) 2022-2025 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
    Lukas Stennes.
 
    This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,6 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
 #define _GNU_SOURCE
-#include <immintrin.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,24 +26,22 @@
 
 #include "halfloop-bitslice.h"
 
-#define GET_U128_BIT(V, B) _mm256_set1_epi64x(0ULL - (((V) >> (127 - B)) & 1))
-#define GET_U64_BIT(V, B)  _mm256_set1_epi64x(0ULL - (((V) >> (63  - B)) & 1))
-#define GET_U32_BIT(V, B)  _mm256_set1_epi64x(0ULL - (((V) >> (31  - B)) & 1))
-
-typedef __m256i u256;
+#define GET_U128_BIT(V, B) (0U - (((V[B >> 6]) >> (63 - (B & 63))) & 1))
+#define GET_U64_BIT(V, B)  (0U - (((V) >> (63  - B)) & 1))
+#define GET_U32_BIT(V, B)  (0U - (((V) >> (31  - B)) & 1))
 
 /**
  * @brief Represents a byte in the bitslice implementation.
  */
 typedef struct {
-  u256 b0; /* MSB */
-  u256 b1;
-  u256 b2;
-  u256 b3;
-  u256 b4;
-  u256 b5;
-  u256 b6;
-  u256 b7; /* LSB */
+  u32 b0; /* MSB */
+  u32 b1;
+  u32 b2;
+  u32 b3;
+  u32 b4;
+  u32 b5;
+  u32 b6;
+  u32 b7; /* LSB */
 } eightbits;
 
 /**
@@ -62,120 +59,120 @@ typedef struct {
  * @see https://cs-www.cs.yale.edu/homes/peralta/CircuitStuff/SLP_AES_113.txt
  */
 static eightbits bitslice_sub_bytes(eightbits in) {
-  u256 y14  =   in.b3  ^ in.b5;
-  u256 y13  =   in.b0  ^ in.b6;
-  u256 y9   =   in.b0  ^ in.b3;
-  u256 y8   =   in.b0  ^ in.b5;
-  u256 t0   =   in.b1  ^ in.b2;
-  u256 y1   =   t0     ^ in.b7;
-  u256 y4   =   y1     ^ in.b3;
-  u256 y12  =   y13    ^ y14;
-  u256 y2   =   y1     ^ in.b0;
-  u256 y5   =   y1     ^ in.b6;
-  u256 y3   =   y5     ^ y8;
-  u256 t1   =   in.b4  ^ y12;
-  u256 y15  =   t1     ^ in.b5;
-  u256 y20  =   t1     ^ in.b1;
-  u256 y6   =   y15    ^ in.b7;
-  u256 y10  =   y15    ^ t0;
-  u256 y11  =   y20    ^ y9;
-  u256 y7   =   in.b7  ^ y11;
-  u256 y17  =   y10    ^ y11;
-  u256 y19  =   y10    ^ y8;
-  u256 y16  =   t0     ^ y11;
-  u256 y21  =   y13    ^ y16;
-  u256 y18  =   in.b0  ^ y16;
-  u256 t2   =   y12    & y15;
-  u256 t3   =   y3     & y6;
-  u256 t4   =   t3     ^ t2;
-  u256 t5   =   y4     & in.b7;
-  u256 t6   =   t5     ^ t2;
-  u256 t7   =   y13    & y16;
-  u256 t8   =   y5     & y1;
-  u256 t9   =   t8     ^ t7;
-  u256 t10  =   y2     & y7;
-  u256 t11  =   t10    ^ t7;
-  u256 t12  =   y9     & y11;
-  u256 t13  =   y14    & y17;
-  u256 t14  =   t13    ^ t12;
-  u256 t15  =   y8     & y10;
-  u256 t16  =   t15    ^ t12;
-  u256 t17  =   t4     ^ y20;
-  u256 t18  =   t6     ^ t16;
-  u256 t19  =   t9     ^ t14;
-  u256 t20  =   t11    ^ t16;
-  u256 t21  =   t17    ^ t14;
-  u256 t22  =   t18    ^ y19;
-  u256 t23  =   t19    ^ y21;
-  u256 t24  =   t20    ^ y18;
-  u256 t25  =   t21    ^ t22;
-  u256 t26  =   t21    & t23;
-  u256 t27  =   t24    ^ t26;
-  u256 t28  =   t25    & t27;
-  u256 t29  =   t28    ^ t22;
-  u256 t30  =   t23    ^ t24;
-  u256 t31  =   t22    ^ t26;
-  u256 t32  =   t31    & t30;
-  u256 t33  =   t32    ^ t24;
-  u256 t34  =   t23    ^ t33;
-  u256 t35  =   t27    ^ t33;
-  u256 t36  =   t24    & t35;
-  u256 t37  =   t36    ^ t34;
-  u256 t38  =   t27    ^ t36;
-  u256 t39  =   t29    & t38;
-  u256 t40  =   t25    ^ t39;
-  u256 t41  =   t40    ^ t37;
-  u256 t42  =   t29    ^ t33;
-  u256 t43  =   t29    ^ t40;
-  u256 t44  =   t33    ^ t37;
-  u256 t45  =   t42    ^ t41;
-  u256 z0   =   t44    & y15;
-  u256 z1   =   t37    & y6;
-  u256 z2   =   t33    & in.b7;
-  u256 z3   =   t43    & y16;
-  u256 z4   =   t40    & y1;
-  u256 z5   =   t29    & y7;
-  u256 z6   =   t42    & y11;
-  u256 z7   =   t45    & y17;
-  u256 z8   =   t41    & y10;
-  u256 z9   =   t44    & y12;
-  u256 z10  =   t37    & y3;
-  u256 z11  =   t33    & y4;
-  u256 z12  =   t43    & y13;
-  u256 z13  =   t40    & y5;
-  u256 z14  =   t29    & y2;
-  u256 z15  =   t42    & y9;
-  u256 z16  =   t45    & y14;
-  u256 z17  =   t41    & y8;
-  u256 tc1  =   z15    ^ z16;
-  u256 tc2  =   z10    ^ tc1;
-  u256 tc3  =   z9     ^ tc2;
-  u256 tc4  =   z0     ^ z2;
-  u256 tc5  =   z1     ^ z0;
-  u256 tc6  =   z3     ^ z4;
-  u256 tc7  =   z12    ^ tc4;
-  u256 tc8  =   z7     ^ tc6;
-  u256 tc9  =   z8     ^ tc7;
-  u256 tc10 =   tc8    ^ tc9;
-  u256 tc11 =   tc6    ^ tc5;
-  u256 tc12 =   z3     ^ z5;
-  u256 tc13 =   z13    ^ tc1;
-  u256 tc14 =   tc4    ^ tc12;
+  u32 y14  =   in.b3  ^ in.b5;
+  u32 y13  =   in.b0  ^ in.b6;
+  u32 y9   =   in.b0  ^ in.b3;
+  u32 y8   =   in.b0  ^ in.b5;
+  u32 t0   =   in.b1  ^ in.b2;
+  u32 y1   =   t0     ^ in.b7;
+  u32 y4   =   y1     ^ in.b3;
+  u32 y12  =   y13    ^ y14;
+  u32 y2   =   y1     ^ in.b0;
+  u32 y5   =   y1     ^ in.b6;
+  u32 y3   =   y5     ^ y8;
+  u32 t1   =   in.b4  ^ y12;
+  u32 y15  =   t1     ^ in.b5;
+  u32 y20  =   t1     ^ in.b1;
+  u32 y6   =   y15    ^ in.b7;
+  u32 y10  =   y15    ^ t0;
+  u32 y11  =   y20    ^ y9;
+  u32 y7   =   in.b7  ^ y11;
+  u32 y17  =   y10    ^ y11;
+  u32 y19  =   y10    ^ y8;
+  u32 y16  =   t0     ^ y11;
+  u32 y21  =   y13    ^ y16;
+  u32 y18  =   in.b0  ^ y16;
+  u32 t2   =   y12    & y15;
+  u32 t3   =   y3     & y6;
+  u32 t4   =   t3     ^ t2;
+  u32 t5   =   y4     & in.b7;
+  u32 t6   =   t5     ^ t2;
+  u32 t7   =   y13    & y16;
+  u32 t8   =   y5     & y1;
+  u32 t9   =   t8     ^ t7;
+  u32 t10  =   y2     & y7;
+  u32 t11  =   t10    ^ t7;
+  u32 t12  =   y9     & y11;
+  u32 t13  =   y14    & y17;
+  u32 t14  =   t13    ^ t12;
+  u32 t15  =   y8     & y10;
+  u32 t16  =   t15    ^ t12;
+  u32 t17  =   t4     ^ y20;
+  u32 t18  =   t6     ^ t16;
+  u32 t19  =   t9     ^ t14;
+  u32 t20  =   t11    ^ t16;
+  u32 t21  =   t17    ^ t14;
+  u32 t22  =   t18    ^ y19;
+  u32 t23  =   t19    ^ y21;
+  u32 t24  =   t20    ^ y18;
+  u32 t25  =   t21    ^ t22;
+  u32 t26  =   t21    & t23;
+  u32 t27  =   t24    ^ t26;
+  u32 t28  =   t25    & t27;
+  u32 t29  =   t28    ^ t22;
+  u32 t30  =   t23    ^ t24;
+  u32 t31  =   t22    ^ t26;
+  u32 t32  =   t31    & t30;
+  u32 t33  =   t32    ^ t24;
+  u32 t34  =   t23    ^ t33;
+  u32 t35  =   t27    ^ t33;
+  u32 t36  =   t24    & t35;
+  u32 t37  =   t36    ^ t34;
+  u32 t38  =   t27    ^ t36;
+  u32 t39  =   t29    & t38;
+  u32 t40  =   t25    ^ t39;
+  u32 t41  =   t40    ^ t37;
+  u32 t42  =   t29    ^ t33;
+  u32 t43  =   t29    ^ t40;
+  u32 t44  =   t33    ^ t37;
+  u32 t45  =   t42    ^ t41;
+  u32 z0   =   t44    & y15;
+  u32 z1   =   t37    & y6;
+  u32 z2   =   t33    & in.b7;
+  u32 z3   =   t43    & y16;
+  u32 z4   =   t40    & y1;
+  u32 z5   =   t29    & y7;
+  u32 z6   =   t42    & y11;
+  u32 z7   =   t45    & y17;
+  u32 z8   =   t41    & y10;
+  u32 z9   =   t44    & y12;
+  u32 z10  =   t37    & y3;
+  u32 z11  =   t33    & y4;
+  u32 z12  =   t43    & y13;
+  u32 z13  =   t40    & y5;
+  u32 z14  =   t29    & y2;
+  u32 z15  =   t42    & y9;
+  u32 z16  =   t45    & y14;
+  u32 z17  =   t41    & y8;
+  u32 tc1  =   z15    ^ z16;
+  u32 tc2  =   z10    ^ tc1;
+  u32 tc3  =   z9     ^ tc2;
+  u32 tc4  =   z0     ^ z2;
+  u32 tc5  =   z1     ^ z0;
+  u32 tc6  =   z3     ^ z4;
+  u32 tc7  =   z12    ^ tc4;
+  u32 tc8  =   z7     ^ tc6;
+  u32 tc9  =   z8     ^ tc7;
+  u32 tc10 =   tc8    ^ tc9;
+  u32 tc11 =   tc6    ^ tc5;
+  u32 tc12 =   z3     ^ z5;
+  u32 tc13 =   z13    ^ tc1;
+  u32 tc14 =   tc4    ^ tc12;
   eightbits out;
-  out.b3    =   tc3    ^ tc11;
-  u256 tc16 =   z6     ^ tc8;
-  u256 tc17 =   z14    ^ tc10;
-  u256 tc18 =   tc13   ^ tc14;
-  out.b7    = ~(z12    ^ tc18);
-  u256 tc20 =   z15    ^ tc16;
-  u256 tc21 =   tc2    ^ z11;
-  out.b0    =   tc3    ^ tc16;
-  out.b6    = ~(tc10   ^ tc18);
-  out.b4    =   tc14   ^ out.b3;
-  out.b1    = ~(out.b3 ^ tc16);
-  u256 tc26 =   tc17   ^ tc20;
-  out.b2    = ~(tc26   ^ z17);
-  out.b5    =   tc21   ^ tc17;
+  out.b3   =   tc3    ^ tc11;
+  u32 tc16 =   z6     ^ tc8;
+  u32 tc17 =   z14    ^ tc10;
+  u32 tc18 =   tc13   ^ tc14;
+  out.b7   = ~(z12    ^ tc18);
+  u32 tc20 =   z15    ^ tc16;
+  u32 tc21 =   tc2    ^ z11;
+  out.b0   =   tc3    ^ tc16;
+  out.b6   = ~(tc10   ^ tc18);
+  out.b4   =   tc14   ^ out.b3;
+  out.b1   = ~(out.b3 ^ tc16);
+  u32 tc26 =   tc17   ^ tc20;
+  out.b2   = ~(tc26   ^ z17);
+  out.b5   =   tc21   ^ tc17;
   return out;
 }
 
@@ -261,7 +258,7 @@ static twentyfourbits bitslice_mix_columns(twentyfourbits in) {
   return out;
 }
 
-halfloop_result_t halfloop_bitslice(u32 pt, u32 ct, u128 pkey, u32 **found, int *num_found) {
+halfloop_result_t halfloop_bitslice(u32 pt, u32 ct, const u64 *pkey, u32 **found, int *num_found) {
   if (found == NULL || num_found == NULL) {
     return HALFLOOP_BAD_ARGUMENT;
   }
@@ -306,12 +303,12 @@ halfloop_result_t halfloop_bitslice(u32 pt, u32 ct, u128 pkey, u32 **found, int 
     }
   };
 
-  ct = (inv_sub_bytes(inv_rotate_rows(inv_mix_columns(ct))) ^ (pkey >> 64)) & 0xffffff;
+  ct = (inv_sub_bytes(inv_rotate_rows(inv_mix_columns(ct))) ^ pkey[0]) & 0xffffff;
   ct = inv_sub_bytes(inv_rotate_rows(inv_mix_columns(ct)));
 
-  u32 g_value = key_schedule_g((u32)(pkey ^ (pkey >> 32)), 1);
+  u32 g_value = key_schedule_g((u32)(pkey[1] ^ (pkey[1] >> 32)), 1);
 
-  for (u64 rk56 = 0; rk56 < 0x100000000; rk56 += 256) {
+  for (u64 rk56 = 0; rk56 < 0x100000000; rk56 += 32) {
     twentyfourbits state = pt_bits;
 
     /* Add rk0. */
@@ -354,22 +351,14 @@ halfloop_result_t halfloop_bitslice(u32 pt, u32 ct, u128 pkey, u32 **found, int 
     state.msb.b5 ^= GET_U64_BIT(rk56, 53)  ^ GET_U32_BIT(g_value, 29);
     state.msb.b6 ^= GET_U64_BIT(rk56, 54)  ^ GET_U32_BIT(g_value, 30);
     state.msb.b7 ^= GET_U64_BIT(rk56, 55)  ^ GET_U32_BIT(g_value, 31);
-    state.mid.b0 ^= _mm256_set_epi64x(
-        0xFFFFFFFFFFFFFFFFULL,
-        0xFFFFFFFFFFFFFFFFULL,
-        0x0000000000000000ULL,
-        0x0000000000000000ULL) ^ GET_U128_BIT(pkey, 0);
-    state.mid.b1 ^= _mm256_set_epi64x(
-        0xFFFFFFFFFFFFFFFFULL,
-        0x0000000000000000ULL,
-        0xFFFFFFFFFFFFFFFFULL,
-        0x0000000000000000ULL) ^ GET_U128_BIT(pkey, 1);
-    state.mid.b2 ^= _mm256_set1_epi64x(0xFFFFFFFF00000000ULL) ^ GET_U128_BIT(pkey, 2);
-    state.mid.b3 ^= _mm256_set1_epi64x(0xFFFF0000FFFF0000ULL) ^ GET_U128_BIT(pkey, 3);
-    state.mid.b4 ^= _mm256_set1_epi64x(0xFF00FF00FF00FF00ULL) ^ GET_U128_BIT(pkey, 4);
-    state.mid.b5 ^= _mm256_set1_epi64x(0xF0F0F0F0F0F0F0F0ULL) ^ GET_U128_BIT(pkey, 5);
-    state.mid.b6 ^= _mm256_set1_epi64x(0xCCCCCCCCCCCCCCCCULL) ^ GET_U128_BIT(pkey, 6);
-    state.mid.b7 ^= _mm256_set1_epi64x(0xAAAAAAAAAAAAAAAAULL) ^ GET_U128_BIT(pkey, 7);
+    state.mid.b0 ^= GET_U64_BIT(rk56, 56)  ^ GET_U128_BIT(pkey, 0);
+    state.mid.b1 ^= GET_U64_BIT(rk56, 57)  ^ GET_U128_BIT(pkey, 1);
+    state.mid.b2 ^= GET_U64_BIT(rk56, 58)  ^ GET_U128_BIT(pkey, 2);
+    state.mid.b3 ^= 0xFFFF0000U            ^ GET_U128_BIT(pkey, 3);
+    state.mid.b4 ^= 0xFF00FF00U            ^ GET_U128_BIT(pkey, 4);
+    state.mid.b5 ^= 0xF0F0F0F0U            ^ GET_U128_BIT(pkey, 5);
+    state.mid.b6 ^= 0xCCCCCCCCU            ^ GET_U128_BIT(pkey, 6);
+    state.mid.b7 ^= 0xAAAAAAAAU            ^ GET_U128_BIT(pkey, 7);
     state.lsb.b0 ^= GET_U128_BIT(pkey, 40) ^ GET_U64_BIT(rk56, 32);
     state.lsb.b1 ^= GET_U128_BIT(pkey, 41) ^ GET_U64_BIT(rk56, 33);
     state.lsb.b2 ^= GET_U128_BIT(pkey, 42) ^ GET_U64_BIT(rk56, 34);
@@ -401,22 +390,14 @@ halfloop_result_t halfloop_bitslice(u32 pt, u32 ct, u128 pkey, u32 **found, int 
     state.mid.b5 ^= GET_U128_BIT(pkey, 61) ^ GET_U64_BIT(rk56, 53);
     state.mid.b6 ^= GET_U128_BIT(pkey, 62) ^ GET_U64_BIT(rk56, 54);
     state.mid.b7 ^= GET_U128_BIT(pkey, 63) ^ GET_U64_BIT(rk56, 55);
-    state.lsb.b0 ^= _mm256_set_epi64x(
-        0xFFFFFFFFFFFFFFFFULL,
-        0xFFFFFFFFFFFFFFFFULL,
-        0x0000000000000000ULL,
-        0x0000000000000000ULL) ^ GET_U128_BIT(pkey, 64);
-    state.lsb.b1 ^= _mm256_set_epi64x(
-        0xFFFFFFFFFFFFFFFFULL,
-        0x0000000000000000ULL,
-        0xFFFFFFFFFFFFFFFFULL,
-        0x0000000000000000ULL) ^ GET_U128_BIT(pkey, 65);
-    state.lsb.b2 ^= GET_U128_BIT(pkey, 66) ^ _mm256_set1_epi64x(0xFFFFFFFF00000000ULL);
-    state.lsb.b3 ^= GET_U128_BIT(pkey, 67) ^ _mm256_set1_epi64x(0xFFFF0000FFFF0000ULL);
-    state.lsb.b4 ^= GET_U128_BIT(pkey, 68) ^ _mm256_set1_epi64x(0xFF00FF00FF00FF00ULL);
-    state.lsb.b5 ^= GET_U128_BIT(pkey, 69) ^ _mm256_set1_epi64x(0xF0F0F0F0F0F0F0F0ULL);
-    state.lsb.b6 ^= GET_U128_BIT(pkey, 70) ^ _mm256_set1_epi64x(0xCCCCCCCCCCCCCCCCULL);
-    state.lsb.b7 ^= GET_U128_BIT(pkey, 71) ^ _mm256_set1_epi64x(0xAAAAAAAAAAAAAAAAULL);
+    state.lsb.b0 ^= GET_U128_BIT(pkey, 64) ^ GET_U64_BIT(rk56, 56);
+    state.lsb.b1 ^= GET_U128_BIT(pkey, 65) ^ GET_U64_BIT(rk56, 57);
+    state.lsb.b2 ^= GET_U128_BIT(pkey, 66) ^ GET_U64_BIT(rk56, 58);
+    state.lsb.b3 ^= GET_U128_BIT(pkey, 67) ^ 0xFFFF0000U;
+    state.lsb.b4 ^= GET_U128_BIT(pkey, 68) ^ 0xFF00FF00U;
+    state.lsb.b5 ^= GET_U128_BIT(pkey, 69) ^ 0xF0F0F0F0U;
+    state.lsb.b6 ^= GET_U128_BIT(pkey, 70) ^ 0xCCCCCCCCU;
+    state.lsb.b7 ^= GET_U128_BIT(pkey, 71) ^ 0xAAAAAAAAU;
 
     state.msb = bitslice_sub_bytes(state.msb);
     state.mid = bitslice_rotate_rows_6(bitslice_sub_bytes(state.mid));
@@ -533,24 +514,16 @@ halfloop_result_t halfloop_bitslice(u32 pt, u32 ct, u128 pkey, u32 **found, int 
     state.mid.b5 ^= GET_U64_BIT(rk56, 53);
     state.mid.b6 ^= GET_U64_BIT(rk56, 54);
     state.mid.b7 ^= GET_U64_BIT(rk56, 55);
-    state.lsb.b0 ^= _mm256_set_epi64x(
-        0xFFFFFFFFFFFFFFFFULL,
-        0xFFFFFFFFFFFFFFFFULL,
-        0x0000000000000000ULL,
-        0x0000000000000000ULL);
-    state.lsb.b1 ^= _mm256_set_epi64x(
-        0xFFFFFFFFFFFFFFFFULL,
-        0x0000000000000000ULL,
-        0xFFFFFFFFFFFFFFFFULL,
-        0x0000000000000000ULL);
-    state.lsb.b2 ^= _mm256_set1_epi64x(0xFFFFFFFF00000000ULL);
-    state.lsb.b3 ^= _mm256_set1_epi64x(0xFFFF0000FFFF0000ULL);
-    state.lsb.b4 ^= _mm256_set1_epi64x(0xFF00FF00FF00FF00ULL);
-    state.lsb.b5 ^= _mm256_set1_epi64x(0xF0F0F0F0F0F0F0F0ULL);
-    state.lsb.b6 ^= _mm256_set1_epi64x(0xCCCCCCCCCCCCCCCCULL);
-    state.lsb.b7 ^= _mm256_set1_epi64x(0xAAAAAAAAAAAAAAAAULL);
+    state.lsb.b0 ^= GET_U64_BIT(rk56, 56);
+    state.lsb.b1 ^= GET_U64_BIT(rk56, 57);
+    state.lsb.b2 ^= GET_U64_BIT(rk56, 58);
+    state.lsb.b3 ^= 0xFFFF0000U;
+    state.lsb.b4 ^= 0xFF00FF00U;
+    state.lsb.b5 ^= 0xF0F0F0F0U;
+    state.lsb.b6 ^= 0xCCCCCCCCU;
+    state.lsb.b7 ^= 0xAAAAAAAAU;
 
-    u256 cmp;
+    u32 cmp;
     cmp  = state.msb.b0 ^ GET_U32_BIT(ct, 8);
     cmp |= state.msb.b1 ^ GET_U32_BIT(ct, 9);
     cmp |= state.msb.b2 ^ GET_U32_BIT(ct, 10);
@@ -577,21 +550,17 @@ halfloop_result_t halfloop_bitslice(u32 pt, u32 ct, u128 pkey, u32 **found, int 
     cmp |= state.lsb.b7 ^ GET_U32_BIT(ct, 31);
     cmp = ~cmp;
 
-    u64 cmpa[4];
-    _mm256_storeu_si256((u256*)cmpa, cmp);
-    for (int i = 0; i < 4; i++) {
-      while (cmpa[i] != 0) {
-        if (*num_found == alloc) {
-          alloc += 300;
-          u32 *tmp = realloc(*found, alloc * sizeof(u32));
-          RETURN_IF(tmp == NULL, HALFLOOP_MEMORY_ERROR);
-          *found = tmp;
-        }
-        int low6 = __builtin_ffsl(cmpa[i]) - 1;
-        (*found)[*num_found] = rk56 | (i << 6) | low6;
-        cmpa[i] ^= 1ULL << low6;
-        *num_found += 1;
+    while (cmp != 0) {
+      if (*num_found == alloc) {
+        alloc += 300;
+        u32 *tmp = realloc(*found, alloc * sizeof(u32));
+        RETURN_IF(tmp == NULL, HALFLOOP_MEMORY_ERROR);
+        *found = tmp;
       }
+      int low6 = __builtin_ffsl(cmp) - 1;
+      (*found)[*num_found] = rk56 | low6;
+      cmp ^= 1U << low6;
+      *num_found += 1;
     }
   }
 
@@ -608,14 +577,14 @@ error:
  * Used for testing.
  */
 static u8 get_lower_bits(eightbits in) {
-  u8 ret = (_mm256_cvtsi256_si32(in.b0) & 1);
-  ret = (ret << 1) | (_mm256_cvtsi256_si32(in.b1) & 1);
-  ret = (ret << 1) | (_mm256_cvtsi256_si32(in.b2) & 1);
-  ret = (ret << 1) | (_mm256_cvtsi256_si32(in.b3) & 1);
-  ret = (ret << 1) | (_mm256_cvtsi256_si32(in.b4) & 1);
-  ret = (ret << 1) | (_mm256_cvtsi256_si32(in.b5) & 1);
-  ret = (ret << 1) | (_mm256_cvtsi256_si32(in.b6) & 1);
-  ret = (ret << 1) | (_mm256_cvtsi256_si32(in.b7) & 1);
+  u8 ret = in.b0 & 1;
+  ret = (ret << 1) | (in.b1 & 1);
+  ret = (ret << 1) | (in.b2 & 1);
+  ret = (ret << 1) | (in.b3 & 1);
+  ret = (ret << 1) | (in.b4 & 1);
+  ret = (ret << 1) | (in.b5 & 1);
+  ret = (ret << 1) | (in.b6 & 1);
+  ret = (ret << 1) | (in.b7 & 1);
   return ret;
 }
 
@@ -624,14 +593,14 @@ static u8 get_lower_bits(eightbits in) {
  * equal. Used for testing.
  */
 static bool check_equal_bits(eightbits in) {
-  return (_mm256_testz_si256(in.b0, in.b0) || _mm256_testz_si256(~in.b0, ~in.b0))
-      && (_mm256_testz_si256(in.b1, in.b1) || _mm256_testz_si256(~in.b1, ~in.b1))
-      && (_mm256_testz_si256(in.b2, in.b2) || _mm256_testz_si256(~in.b2, ~in.b2))
-      && (_mm256_testz_si256(in.b3, in.b3) || _mm256_testz_si256(~in.b3, ~in.b3))
-      && (_mm256_testz_si256(in.b4, in.b4) || _mm256_testz_si256(~in.b4, ~in.b4))
-      && (_mm256_testz_si256(in.b5, in.b5) || _mm256_testz_si256(~in.b5, ~in.b5))
-      && (_mm256_testz_si256(in.b6, in.b6) || _mm256_testz_si256(~in.b6, ~in.b6))
-      && (_mm256_testz_si256(in.b7, in.b7) || _mm256_testz_si256(~in.b7, ~in.b7));
+  return (in.b0 == 0 || in.b0 == ~0)
+      && (in.b1 == 0 || in.b1 == ~0)
+      && (in.b2 == 0 || in.b2 == ~0)
+      && (in.b3 == 0 || in.b3 == ~0)
+      && (in.b4 == 0 || in.b4 == ~0)
+      && (in.b5 == 0 || in.b5 == ~0)
+      && (in.b6 == 0 || in.b6 == ~0)
+      && (in.b7 == 0 || in.b7 == ~0);
 }
 
 /**
@@ -741,7 +710,7 @@ error:
 halfloop_result_t test_halfloop_bitslice() {
   u32 pt = 0;
   u64 tweak = 0;
-  u128 key = 0;
+  u64 key[2] = {0};
   u32 rk[11];
   u32 *found = NULL;
   int num_found = 0;
@@ -749,7 +718,7 @@ halfloop_result_t test_halfloop_bitslice() {
 
   RETURN_ON_ERROR(random_bytes(&pt, sizeof(u32)));
   RETURN_ON_ERROR(random_bytes(&tweak, sizeof(u64)));
-  RETURN_ON_ERROR(random_bytes(&key, sizeof(u128)));
+  RETURN_ON_ERROR(random_bytes(&key, sizeof(u64) * 2));
   pt &= 0xffffff;
 
   print_message("Testing bitslice subroutines.", WHITE);
@@ -763,11 +732,11 @@ halfloop_result_t test_halfloop_bitslice() {
     state = mix_columns(rotate_rows(sub_bytes(state ^ rk[i])));
   }
 
-  u128 pkey = ((u128)(rk[5] & 0x00ff00) << 112);
-  pkey |= ((u128)rk[7]  << 64);
-  pkey |= ((u128)rk[8]  << 40);
-  pkey |= ((u128)rk[9]  << 16);
-  pkey |= ((u128)rk[10] >> 8);
+  u64 pkey[2] = {
+    ((u64)(rk[5] & 0xff00) << 48) | rk[7],
+    ((u64)rk[8] << 40) | ((u64)rk[9] << 16) | (rk[10] >> 8)
+  };
+
   print_message("Testing bitslice algorithm.", WHITE);
   u32 rk56 = ((rk[5] << 24) | rk[6]);
   struct timespec timer;
@@ -792,7 +761,7 @@ halfloop_result_t test_halfloop_bitslice() {
 error:
   if (err != HALFLOOP_SUCCESS) {
     print_message("Bitslice test failed. PT=%06x tweak=%016" PRIx64 " Key=%016" PRIx64
-        "%016" PRIx64, RED, pt, tweak, (u64)(key >> 64), (u64)key);
+        "%016" PRIx64, RED, pt, tweak, key[0], key[1]);
   }
   free(found);
   return err;

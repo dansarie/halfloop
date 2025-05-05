@@ -1,6 +1,6 @@
 /* Implementation of attacks on HALFLOOP-24.
 
-   Copyright (C) 2022 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
+   Copyright (C) 2022-2025 Marcus Dansarie, Patrick Derbez, Gregor Leander, and
    Lukas Stennes.
 
    This program is free software: you can redistribute it and/or modify
@@ -16,14 +16,12 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
-#include <stdio.h>
-
 #include "halfloop-bitslice.h"
 #include "halfloop-common.h"
 
 int main(int argc, char *argv[]) {
   halfloop_result_t err = HALFLOOP_SUCCESS;
-  u128 key = ((u128)0x2b7e151628aed2a6 << 64) | 0xabf7158809cf4f3c;
+  u64 key[2] = {0x2b7e151628aed2a6ULL, 0xabf7158809cf4f3cULL};
   u64 tweak = 0x543bd88000017550;
   u32 pt = 0x010203;
   u32 ct;
